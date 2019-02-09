@@ -7,8 +7,8 @@ Image registration is a image processing technique which can be used to align tw
 This project focus on the registration accuracy and speed of the registration algorithm which automatic registrate a set of large images from the same tissue samples but stained with different biomarkers.
 
 ## Dataset:
-The Dataset is downloaded from https://anhir.grand-challenge.org/Download/.
+The Dataset is downloaded from: https://anhir.grand-challenge.org/Download/.
 Which contains a set of images and a landmarks files
 
 ## Evaluation:
-The evaluate function is based on the rTRE  for each pair of landmarks in registered images pairs.
+The evaluate function is based on the rTRE for each pair of landmarks in registered images pairs which is the competition criteria function.
