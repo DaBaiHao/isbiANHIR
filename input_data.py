@@ -52,6 +52,7 @@ for each_img_dir,\
 
     imgs_dirs.append(each_img_dir)
     i = i+1
+
 print(dataset_read_result['Source image'][1])
 print(imgs_dirs[1])
 # image = Image.open(imgs_dirs[0])
@@ -59,20 +60,14 @@ print(imgs_dirs[1])
 # plt.axis('on') # 显示坐标轴
 # plt.show()
 
+#%%
+import os
+source_image_array = dataset_read_result['Source image']
+target_image_array = dataset_read_result['Target image']
+assert len(source_image_array) == len(target_image_array)
 
-def warp_affine(img1, img2, lnd1, lnd2):
-    """ estimate an affine transform and perform image and landmarks warping
-    :param ndarray img1: reference image
-    :param ndarray img2: moving landmarks
-    :param ndarray lnd1: reference image
-    :param ndarray lnd2: moving landmarks
-    :return (ndarray, ndarray): moving image and landmarks warped to reference
-    """
-    nb = min(len(lnd1), len(lnd2))
-    pts1 = lnd1[list(LANDMARK_COORDS)].values[:nb]
-    pts2 = lnd2[list(LANDMARK_COORDS)].values[:nb]
-    _, matrix_inv, _, pts2_warp = estimate_affine_transform(pts1, pts2)
-    lnd2_warp = pd.DataFrame(pts2_warp, columns=LANDMARK_COORDS)
-    matrix_inv = matrix_inv[:2, :3].astype(np.float64)
-    img2_warp = cv.warpAffine(img2, matrix_inv, img1.shape[:2][::-1])
-    return img2_warp, lnd2_warp
+
+
+
+
+
