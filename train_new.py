@@ -1,8 +1,7 @@
 import tensorflow as tf
-from model.fcn import fcnRegressor
-from config_folder_guard import config_folder_guard
-from gen_batches import gen_batches
-from logger import my_logger as logger
+import numpy as np
+
+
 import pandas as pd
 from PIL import Image
 
@@ -51,12 +50,7 @@ target_image_array = dataset_read_result['Target image'][:1]
 
 
 
-from keras.preprocessing.image import ImageDataGenerator,load_img,img_to_array
-
-
-import numpy as np
-
-
+"""
 def model():
     x_1 = conv2d(x, 'Conv1', 32, 3, 2, 'SAME', True, tf.nn.relu, self._is_train)
     x_2 = tf.nn.avg_pool(x_1, [1, 3, 3, 1], [1, 2, 2, 1], 'SAME', name='pooling1')
@@ -71,32 +65,85 @@ def model():
     x_9 = reg(x_8, 'Reg1', 2, 3, 1, 'SAME', self._is_train)
     x_10 = reg(x_7, 'Reg2', 2, 3, 1, 'SAME', self._is_train)
     x_11 = reg(x_5, 'Reg3', 2, 3, 1, 'SAME', self._is_train)
-source_image_tensor = []
-target_image_tensor = []
+"""
+
+
+def gen_batches(dataset_read_result):
+    source_image_array = dataset_read_result['Source image']
+    target_image_array = dataset_read_result['Target image']
+
+    # 如果参考图像数量和待配准图像数量不同，那么意味着出错了
+    assert len(source_image_array) == len(target_image_array)
+
+    source_image_array = tf.cast(source_image_array, tf.string)
+    target_image_array = tf.cast(target_image_array, tf.string)
+
+    input_queue = tf.train.slice_input_producer([source_image_array, target_image_array])
+    source_image_array = tf.read_file(input_queue[0])
+    target_image_array = tf.read_file(input_queue[1])
+    source_image_array = tf.image.decode_jpeg(source_image_array, channels=3)
+    target_image_array = tf.image.decode_jpeg(target_image_array, channels=3)
+
+    # resize
+    source_image_array = tf.image.resize_images(source_image_array, [128, 128], method=tf.image.ResizeMethod.BICUBIC)
+    target_image_array = tf.image.resize_images(target_image_array, [128, 128], method=tf.image.ResizeMethod.BICUBIC)
+
+    source_image_array = tf.cast(source_image_array, tf.float32)
+    target_image_array = tf.cast(target_image_array, tf.float32)
+
+    source_image_array = tf.image.per_image_standardization(source_image_array)
+    target_image_array = tf.image.per_image_standardization(target_image_array)
+
+    # 标准化数据
+    source_image_array, target_image_array = tf.train.batch([source_image_array, target_image_array],
+                                                            batch_size=4,
+                                                            num_threads=32,  # 线程
+                                                            capacity=256)
+    return source_image_array, target_image_array
+
+
+source_image_array, target_image_array = gen_batches(dataset_read_result)
+
+
+def inference(source_image_array):
+    with tf.variable_scope('conv1') as scope:
+        weights = tf.get_variable('weights',
+                                  shape=[3, 3, source_image_array.get_shape()[-1], 32],
+                                  dtype=tf.float32,
+                                  initializer=tf.truncated_normal_initializer(stddev=0.1,
+                                                                              dtype=tf.float32))
+        biases = tf.get_variable('biases',
+                                 shape=[32],
+                                 initializer=tf.constant_initializer(0.))
+
+        conv1 = tf.nn.conv2d(source_image_array, weights, strides=[1, 2, 2, 1], padding='SAME')
+        conv1 = tf.nn.bias_add(conv1, biases)
+        conv1 = tf.nn.relu(conv1, name=scope.name)
+    return conv1
+
+
+batch_size = 2
+img_height = 128
+img_width = 128
+x = tf.placeholder(dtype=tf.float32, shape=[batch_size, img_height, img_width, 1])
+y = tf.placeholder(dtype=tf.float32, shape=[batch_size, img_height, img_width, 1])
+
+xy = tf.concat([x, y], axis=3)
+fcn_out = inference(xy)
+
+
+def losses(logits, labels):
 
 
 
-for each_source_image_dir, each_target_image_dir in zip(source_image_array, target_image_array):
-    # keras
-    each_source_image = load_img(each_source_image_dir)
-    each_target_image = load_img(each_target_image_dir)
-
-    # 图片转化成array类型,因flow()接收numpy数组为参数
-    each_source_image_array_type = img_to_array(each_source_image,
-                                                data_format="channels_last")
-    each_target_image_array_type = img_to_array(each_target_image,
-                                                data_format="channels_last")
-    each_source_image_array_type.astype('float32')/255.
-    each_target_image_array_type.astype('float32')/255.
-    # tensor
-    each_source_image_array_type = np.reshape(each_source_image_array_type, each_source_image_array_type.shape)
-    each_target_image_array_type = np.reshape(each_target_image_array_type, each_target_image_array_type.shape)
-    source_image_tensor.append(each_source_image_array_type)
-    target_image_tensor.append(each_target_image_array_type)
 
 
-input_queue = tf.train.slice_input_producer([source_image_tensor, target_image_tensor], shuffle=True)
-batch_x, batch_y = tf.train.batch(input_queue, batch_size=1)
+sess = tf.Session()
+sess.run(tf.global_variables_initializer())
+coord = tf.train.Coordinator()
+threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
+for step in np.arange(10):
 
+    train_logits2 = sess.run(train_logits)
 
