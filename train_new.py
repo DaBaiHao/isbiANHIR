@@ -128,11 +128,11 @@ img_width = 128
 x = tf.placeholder(dtype=tf.float32, shape=[batch_size, img_height, img_width, 1])
 y = tf.placeholder(dtype=tf.float32, shape=[batch_size, img_height, img_width, 1])
 
-xy = tf.concat([x, y], axis=3)
-fcn_out = inference(xy)
+#xy = tf.concat([x, y], axis=3)
+# fcn_out = inference(xy)
 
 
-def losses(logits, labels):
+# def losses(logits, labels):
 
 
 
